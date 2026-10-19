@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Carte MGH</title>
+<meta name="description" content="Carte des sites d'industrie lourde en Europe pour la prospection réducteurs MGH">
+<meta name="theme-color" content="#24346C">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Carte MGH">
+<script src="leaflet.js"></script>
+<script src="data.js"></script>
+<style>
+@font-face{font-family:"Barlow";font-weight:400;font-display:swap;src:url(fonts/barlow-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"Barlow";font-weight:500;font-display:swap;src:url(fonts/barlow-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"Barlow";font-weight:600;font-display:swap;src:url(fonts/barlow-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"Barlow Condensed";font-weight:500;font-display:swap;src:url(fonts/barlow-condensed-latin-500-normal.woff2) format("woff2")}
+@font-face{font-family:"Barlow Condensed";font-weight:600;font-display:swap;src:url(fonts/barlow-condensed-latin-600-normal.woff2) format("woff2")}
+@font-face{font-family:"Barlow Condensed";font-weight:700;font-display:swap;src:url(fonts/barlow-condensed-latin-700-normal.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-weight:400;font-display:swap;src:url(fonts/ibm-plex-mono-latin-400-normal.woff2) format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-weight:500;font-display:swap;src:url(fonts/ibm-plex-mono-latin-500-normal.woff2) format("woff2")}
+html,body{margin:0}[hidden]{display:none!important}img{max-width:100%}
+
+/* Layout : bandeau navy, barre de filtres, carte + fiche latérale, liste tabulaire dessous */
+:root{
+  --navy:#24346C; --navy-2:#1a2652; --grey:#98999B;
+  --bg:#f4f5f8; --panel:#ffffff; --fg:#1b2033; --muted:#5d6273; --line:#dde0e8;
+  --sea:#dfe6f1; --land:#ffffff; --border:#b9c0d0; --chip:#eef0f6;
+  --c-sucre:#c2861a; --c-acier:#24346C; --c-metal:#6b4fa0; --c-ciment:#7d8088;
+  --c-carriere:#8a5a3c; --c-plastique:#1f8a7a; --c-papier:#3f7d2f;
+  --ok:#2f7d4a; --warn:#b26b00; --crit:#b3261e;
+  --f-disp:"Barlow Condensed","Arial Narrow",sans-serif; --f-body:"Barlow",system-ui,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1322; --panel:#171c2e; --fg:#e6e8f0; --muted:#9aa0b4; --line:#2a3148;
+  --sea:#0c1020; --land:#1d2439; --border:#38415e; --chip:#222a42;
+  --c-acier:#7f95e0; --c-ciment:#a9acb4; --c-carriere:#c08a64; --c-metal:#a68ad8; --c-papier:#6fb35c;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1322; --panel:#171c2e; --fg:#e6e8f0; --muted:#9aa0b4; --line:#2a3148;
+  --sea:#0c1020; --land:#1d2439; --border:#38415e; --chip:#222a42;
+  --c-acier:#7f95e0; --c-ciment:#a9acb4; --c-carriere:#c08a64; --c-metal:#a68ad8; --c-papier:#6fb35c;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.45}
+/* --- Leaflet core (inline) --- */
+.leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box,.leaflet-image-layer,.leaflet-layer{position:absolute;left:0;top:0}
+.leaflet-container{overflow:hidden;-webkit-tap-highlight-color:transparent;background:var(--sea);outline:0;font-family:var(--f-body)}
+.leaflet-pane{z-index:400}.leaflet-overlay-pane{z-index:400}.leaflet-marker-pane{z-index:600}.leaflet-tooltip-pane{z-index:650}.leaflet-popup-pane{z-index:700}
+.leaflet-map-pane canvas{z-index:100}.leaflet-map-pane svg{z-index:200}
+.leaflet-control{position:relative;z-index:800;pointer-events:auto;float:left;clear:both}
+.leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}
+.leaflet-top{top:0}.leaflet-left{left:0}.leaflet-bottom{bottom:0}.leaflet-right{right:0}
+.leaflet-top .leaflet-control{margin-top:10px}.leaflet-left .leaflet-control{margin-left:10px}
+.leaflet-interactive{cursor:pointer}.leaflet-grab{cursor:grab}.leaflet-dragging .leaflet-grab{cursor:grabbing}
+.leaflet-zoom-animated{transform-origin:0 0}
+.leaflet-zoom-anim .leaflet-zoom-animated{transition:transform .25s cubic-bezier(0,0,.25,1)}
+.leaflet-bar{border:1px solid var(--border);border-radius:4px;background:var(--panel)}
+.leaflet-bar a{display:block;width:32px;height:32px;line-height:30px;text-align:center;text-decoration:none;color:var(--fg);font:600 18px var(--f-body);border-bottom:1px solid var(--line)}
+.leaflet-bar a:last-child{border-bottom:0}
+.leaflet-tooltip{position:absolute;padding:4px 8px;background:var(--panel);color:var(--fg);border:1px solid var(--border);border-radius:3px;white-space:nowrap;pointer-events:none;font-size:12px;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.leaflet-attribution-flag{display:none!important}
+/* --- App --- */
+header{background:var(--navy);color:#fff;padding-top:calc(14px + env(safe-area-inset-top,0px));padding-bottom:14px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-wrap:wrap;gap:8px 24px;align-items:baseline;justify-content:space-between}
+header h1{margin:0;font:700 26px/1 var(--f-disp);letter-spacing:.02em;text-transform:uppercase}
+header h1 span{color:#b9c3e6;font-weight:500}
+header p{margin:0;color:#c9cfe4;font-size:13px}
+.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px;display:flex;flex-direction:column;gap:14px}
+.kpis{display:flex;flex-wrap:wrap;gap:8px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:8px 12px;min-width:120px}
+.kpi b{display:block;font:600 22px/1.1 var(--f-disp);font-variant-numeric:tabular-nums}
+.kpi small{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.filters label.lbl{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-right:-4px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:999px;padding:5px 11px;font:500 13px var(--f-body);cursor:pointer}
+.chip[aria-pressed="false"]{opacity:.45}
+.chip i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.chip:focus-visible,select:focus-visible,input:focus-visible,button:focus-visible{outline:2px solid var(--c-sucre);outline-offset:2px}
+select,input[type=search]{font:14px var(--f-body);background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:6px 9px}
+input[type=search]{min-width:0;flex:1 1 200px;max-width:320px}
+.btn{font:600 13px var(--f-body);background:var(--navy);color:#fff;border:0;border-radius:4px;padding:7px 12px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--fg);border:1px solid var(--line)}
+.main{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:14px;min-height:560px}
+#map{height:620px;border:1px solid var(--line);border-radius:4px;min-width:0}
+.legend{position:absolute;z-index:900;left:10px;bottom:10px;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:8px 10px;font-size:12px;display:grid;gap:3px}
+.legend i{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:6px}
+.mapbox{position:relative;min-width:0}
+aside{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:16px;overflow:auto;max-height:620px;min-width:0}
+aside .empty{color:var(--muted)}
+aside .empty h2{font:600 20px var(--f-disp);color:var(--fg);margin:0 0 8px}
+.cat{font:600 11px var(--f-body);text-transform:uppercase;letter-spacing:.08em;padding:3px 8px;border-radius:3px;color:#fff;display:inline-block}
+aside h2.name{font:700 24px/1.1 var(--f-disp);margin:10px 0 2px;text-wrap:balance}
+.sub{color:var(--muted);margin-bottom:12px}
+dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 10px;margin:0 0 14px}
+dt{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.05em;padding-top:2px}
+dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.mono{font-family:var(--f-mono);font-size:12.5px}
+h3{font:600 15px var(--f-disp);text-transform:uppercase;letter-spacing:.06em;color:var(--navy);margin:16px 0 6px;border-bottom:1px solid var(--line);padding-bottom:4px}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) h3{color:#9fb0ea}}
+:root[data-theme="dark"] h3{color:#9fb0ea}
+ul.apps{margin:0;padding-left:18px}
+.pill{display:inline-block;font:600 11px var(--f-body);padding:2px 8px;border-radius:999px;border:1px solid currentColor}
+.pill.ok{color:var(--ok)}.pill.warn{color:var(--warn)}
+.pill.zA{color:var(--c-sucre)}.pill.zB{color:var(--c-acier)}.pill.zC{color:var(--muted)}
+.fiab{font-size:12px;color:var(--muted)}
+.links{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.links a{font:600 13px var(--f-body);color:var(--fg);border:1px solid var(--line);border-radius:4px;padding:6px 10px;text-decoration:none}
+.links a:hover{border-color:var(--navy)}
+.note{font-size:12px;color:var(--muted);background:var(--chip);border-radius:4px;padding:8px 10px;margin-top:10px}
+.tablebox{overflow-x:auto;border:1px solid var(--line);border-radius:4px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:13px;min-width:860px}
+th{text-align:left;font:600 11px var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel);cursor:pointer;white-space:nowrap}
+td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:hover td{background:var(--chip);cursor:pointer}
+td .dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:6px}
+.foot{font-size:12px;color:var(--muted);max-width:110ch}
+.btn.geo{background:var(--c-sucre)}
+.btn.inst{background:var(--c-plastique)}
+.offline{font-size:11px;color:#c9cfe4;border:1px solid #6d7bb0;border-radius:999px;padding:2px 8px;margin-left:8px}
+header .hd{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px}
+#toast{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--navy);color:#fff;padding:8px 14px;border-radius:4px;font-weight:600}
+@media (max-width:900px){.main{grid-template-columns:minmax(0,1fr)}#map{height:460px}aside{max-height:none}}
+@media (prefers-reduced-motion:reduce){.leaflet-zoom-anim .leaflet-zoom-animated{transition:none}}
+
+header h1 span[data-i="title"]{color:#fff;font-weight:700}
+header .hr{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px}
+.lang{display:inline-flex;border:1px solid #6d7bb0;border-radius:4px;overflow:hidden}
+.lang button{font:600 12px var(--f-body);letter-spacing:.06em;background:transparent;color:#c9cfe4;border:0;padding:6px 11px;min-height:32px;cursor:pointer}
+.lang button+button{border-left:1px solid #6d7bb0}
+.lang button[aria-pressed="true"]{background:#fff;color:var(--navy)}
+.lang button:focus-visible{outline:2px solid var(--c-sucre);outline-offset:-2px}
+</style>
+</head>
+<body>
+<header>
+  <div class="hd"><h1><span data-i="title">Carte industrie lourde</span> <span class="tg" data-i="subtitle">· prospection réducteurs</span></h1><span class="offline" id="net" hidden data-i="offline">Hors ligne</span></div>
+  <div class="hr">
+    <p>MGH Industrial Gears · Repair · Service · Replace · Engineering</p>
+    <div class="lang" role="group" id="langs" aria-label="Langue / Taal / Language">
+      <button type="button" data-l="fr" aria-pressed="true">FR</button><button type="button" data-l="nl" aria-pressed="false">NL</button><button type="button" data-l="en" aria-pressed="false">EN</button>
+    </div>
+  </div>
+</header>
+<div class="wrap">
+  <div class="kpis" id="kpis"></div>
+  <div class="filters" id="cats"></div>
+  <div class="filters">
+    <label class="lbl" for="zone" data-i="zone">Zone</label>
+    <select id="zone">
+      <option value="all" data-i="zoneAll">Toute l'Europe</option>
+      <option value="mgh" selected data-i="zoneMgh">Zone MGH (BE, NL, LU, FR, ES, IT)</option>
+      <option value="sect" data-i="zoneSect">Secteur Wallonie + Nord/Est France</option>
+    </select>
+    <label class="lbl" for="pays" data-i="country">Pays</label>
+    <select id="pays"></select>
+    <label class="lbl" for="q" data-i="search">Recherche</label>
+    <input type="search" id="q" data-ip="searchPh" placeholder="Site, groupe, ville…">
+    <button class="btn geo" id="geo" type="button" data-i="geo">Autour de moi</button>
+    <label class="lbl" for="rad" id="radl" hidden data-i="radius">Rayon</label>
+    <select id="rad" hidden><option value="0" data-i="unlimited">Illimité</option><option value="50">50 km</option><option value="100" selected>100 km</option><option value="200">200 km</option><option value="400">400 km</option></select>
+    <button class="btn ghost" id="reset" type="button" data-i="reset">Vue Europe</button>
+    <button class="btn inst" id="install" type="button" hidden data-i="install">Installer l'application</button>
+    <button class="btn" id="csv" type="button" data-i="csv">Copier la sélection (CSV)</button>
+  </div>
+  <div class="main">
+    <div class="mapbox"><div id="map" role="application" data-ia="mapLabel" aria-label="Carte des sites"></div><div class="legend" id="legend"></div></div>
+    <aside id="fiche" aria-live="polite"></aside>
+  </div>
+  <div class="tablebox"><table><thead><tr>
+    <th data-k="d" id="thd" hidden data-i="thDist">Dist.</th><th data-k="n" data-i="thSite">Site</th><th data-k="c" data-i="thSector">Secteur</th><th data-k="g" data-i="thGroup">Groupe</th><th data-k="p" data-i="thCountry">Pays</th><th data-k="v" data-i="thCity">Ville</th><th data-k="cap" data-i="thCap">Capacité</th><th data-k="st" data-i="thStatus">Statut</th><th data-k="f" data-i="thRel">Fiab.</th>
+  </tr></thead><tbody id="tb"></tbody></table></div>
+  <p class="foot" id="foot"></p>
+</div>
+<div id="toast" hidden></div>
+
+<script>
+const SITES = window.MGH_SITES;
+const EU = window.MGH_EU;
+const TR = window.MGH_TR || {};
+const LI = {fr:-1, nl:0, en:1};
+
+const I18N = {
+fr:{
+  title:"Carte industrie lourde", subtitle:"· prospection réducteurs", offline:"Hors ligne",
+  sectors:"Secteurs", zone:"Zone", zoneAll:"Toute l'Europe", zoneMgh:"Zone MGH (BE, NL, LU, FR, ES, IT)", zoneSect:"Secteur Wallonie + Nord/Est France",
+  country:"Pays", all:"Tous", search:"Recherche", searchPh:"Site, groupe, ville…", geo:"Autour de moi", radius:"Rayon", unlimited:"Illimité",
+  reset:"Vue Europe", install:"Installer l'application", csv:"Copier la sélection (CSV)", mapLabel:"Carte des sites",
+  thDist:"Dist.", thSite:"Site", thSector:"Secteur", thGroup:"Groupe", thCountry:"Pays", thCity:"Ville", thCap:"Capacité", thStatus:"Statut", thRel:"Fiab.",
+  foot:"<b>Limites.</b> Base de prospection initiale de {n} sites, construite à partir de connaissances publiques et vérifiée ponctuellement le 15/10/2026 (fermetures sucrières FR, Port Talbot, Dunkerque, Craemer, Greif Ede). Coordonnées approchées à l'échelle de la commune. Capacités nominales en ordre de grandeur ; les historiques annuels de production par site ne sont pas publiés de façon homogène et ne figurent pas ici. Indice de fiabilité : A donnée publique établie, B ordre de grandeur, C à vérifier avant usage commercial. Données intégrées à l'application : consultables hors connexion. Aucune coordonnée nominative n'est fournie : utiliser le lien de recherche LinkedIn ou l'accueil du site pour identifier le responsable maintenance.",
+  kShown:"Sites affichés", kSect:"Dans mon secteur", k50:"À moins de 50 km",
+  zA:"Secteur Wallonie / Nord-Est FR", zB:"Zone MGH", zC:"Hors zone MGH",
+  loc:"Localisation", dist:"Distance", distTxt:"{d} km à vol d'oiseau", status:"Statut", cap:"Capacité", hist:"Historique", none:"Non renseigné",
+  target:"Ciblage", rel:"Fiabilité", relA:"A · donnée publique établie", relB:"B · ordre de grandeur", relC:"C · à vérifier avant usage",
+  appsH:"Applications réducteurs à cibler", mghH:"Angle MGH",
+  mgh:["Révision et réparation toutes marques, jusqu'à 50 t","Inspection, analyse d'huile, surveillance d'état","Remplacement et fourniture neuve, stock de pièces","Intervention sur site 24/7, contrat de service"],
+  contactH:"Contact", web:"Site web", liSearch:"Rechercher le resp. maintenance", route:"Itinéraire",
+  note:"Coordonnées nominatives non fournies : non vérifiables et soumises au RGPD. Cibles types : responsable maintenance, ingénieur fiabilité, acheteur MRO, directeur technique.",
+  emptyH:"Sélectionnez un site",
+  empty:["Touchez un point sur la carte ou une ligne du tableau pour zoomer sur le site et afficher sa fiche : groupe, capacité, statut, historique, applications réducteurs et liens de contact.","En déplacement, « Autour de moi » centre la carte sur votre position et trie les sites par distance.","Par défaut, la carte affiche la zone MGH. Le filtre « Secteur » restreint à la Wallonie, aux Hauts-de-France et au Grand Est."],
+  csvHead:["Site","Secteur","Sous-secteur","Groupe","Pays","Ville","Région","Lat","Lon","Capacité","Statut","Historique","Web","Fiabilité"],
+  copied:"{n} sites copiés : collez dans Excel", copyFail:"Copie refusée par le navigateur",
+  geoNA:"Géolocalisation indisponible sur cet appareil", geoWait:"Recherche de votre position…", myPos:"Ma position",
+  geoRes:"{n} sites dans un rayon de {r}", europe:"toute l'Europe", geoDenied:"Autorisez l'accès à la position dans les réglages", geoFail:"Position introuvable, réessayez",
+  installed:"Application installée"
+},
+nl:{
+  title:"Kaart zware industrie", subtitle:"· prospectie tandwielkasten", offline:"Offline",
+  sectors:"Sectoren", zone:"Zone", zoneAll:"Heel Europa", zoneMgh:"MGH-zone (BE, NL, LU, FR, ES, IT)", zoneSect:"Regio Wallonië + Noord/Oost-Frankrijk",
+  country:"Land", all:"Alle", search:"Zoeken", searchPh:"Site, groep, stad…", geo:"In mijn buurt", radius:"Straal", unlimited:"Onbeperkt",
+  reset:"Overzicht Europa", install:"App installeren", csv:"Selectie kopiëren (CSV)", mapLabel:"Kaart van de sites",
+  thDist:"Afst.", thSite:"Site", thSector:"Sector", thGroup:"Groep", thCountry:"Land", thCity:"Stad", thCap:"Capaciteit", thStatus:"Status", thRel:"Betr.",
+  foot:"<b>Beperkingen.</b> Eerste prospectiebestand van {n} sites, opgebouwd uit openbare informatie en steekproefsgewijs gecontroleerd op 15/10/2026 (sluitingen Franse suikerfabrieken, Port Talbot, Duinkerke, Craemer, Greif Ede). Coördinaten benaderd op gemeenteniveau. Nominale capaciteiten als grootteorde ; jaarlijkse productiecijfers per site worden niet uniform gepubliceerd en zijn hier niet opgenomen. Betrouwbaarheid: A vaststaand openbaar gegeven, B grootteorde, C te controleren vóór commercieel gebruik. De gegevens zitten in de app en zijn offline raadpleegbaar. Er worden geen namen van contactpersonen gegeven: gebruik de LinkedIn-zoeklink of het onthaal van de site om de onderhoudsverantwoordelijke te vinden.",
+  kShown:"Getoonde sites", kSect:"In mijn regio", k50:"Binnen 50 km",
+  zA:"Regio Wallonië / Noord-Oost FR", zB:"MGH-zone", zC:"Buiten MGH-zone",
+  loc:"Locatie", dist:"Afstand", distTxt:"{d} km in vogelvlucht", status:"Status", cap:"Capaciteit", hist:"Historiek", none:"Niet ingevuld",
+  target:"Doelgroep", rel:"Betrouwbaarheid", relA:"A · vaststaand openbaar gegeven", relB:"B · grootteorde", relC:"C · te controleren vóór gebruik",
+  appsH:"Toepassingen tandwielkasten", mghH:"Aanpak MGH",
+  mgh:["Revisie en herstelling van alle merken, tot 50 t","Inspectie, olieanalyse, conditiebewaking","Vervanging en nieuwe levering, onderdelenvoorraad","Interventie ter plaatse 24/7, servicecontract"],
+  contactH:"Contact", web:"Website", liSearch:"Onderhoudsverantwoordelijke zoeken", route:"Route",
+  note:"Geen namen van contactpersonen: niet verifieerbaar en onderworpen aan de AVG. Typische doelgroep: onderhoudsverantwoordelijke, betrouwbaarheidsingenieur, MRO-aankoper, technisch directeur.",
+  emptyH:"Kies een site",
+  empty:["Tik op een punt op de kaart of op een rij in de tabel om in te zoomen en de fiche te tonen: groep, capaciteit, status, historiek, toepassingen tandwielkasten en contactlinks.","Onderweg centreert « In mijn buurt » de kaart op uw positie en sorteert de sites op afstand.","Standaard toont de kaart de MGH-zone. De filter « Regio » beperkt tot Wallonië, Hauts-de-France en Grand Est."],
+  csvHead:["Site","Sector","Subsector","Groep","Land","Stad","Regio","Lat","Lon","Capaciteit","Status","Historiek","Web","Betrouwbaarheid"],
+  copied:"{n} sites gekopieerd: plak in Excel", copyFail:"Kopiëren geweigerd door de browser",
+  geoNA:"Geolocatie niet beschikbaar op dit toestel", geoWait:"Uw positie wordt gezocht…", myPos:"Mijn positie",
+  geoRes:"{n} sites binnen een straal van {r}", europe:"heel Europa", geoDenied:"Sta toegang tot de locatie toe in de instellingen", geoFail:"Positie niet gevonden, probeer opnieuw",
+  installed:"App geïnstalleerd"
+},
+en:{
+  title:"Heavy industry map", subtitle:"· gearbox prospecting", offline:"Offline",
+  sectors:"Sectors", zone:"Zone", zoneAll:"All of Europe", zoneMgh:"MGH area (BE, NL, LU, FR, ES, IT)", zoneSect:"Territory: Wallonia + North/East France",
+  country:"Country", all:"All", search:"Search", searchPh:"Site, group, city…", geo:"Near me", radius:"Radius", unlimited:"Unlimited",
+  reset:"Europe view", install:"Install app", csv:"Copy selection (CSV)", mapLabel:"Map of sites",
+  thDist:"Dist.", thSite:"Site", thSector:"Sector", thGroup:"Group", thCountry:"Country", thCity:"City", thCap:"Capacity", thStatus:"Status", thRel:"Rel.",
+  foot:"<b>Limitations.</b> Initial prospecting base of {n} sites, built from public information and spot-checked on 15/10/2026 (French sugar closures, Port Talbot, Dunkirk, Craemer, Greif Ede). Coordinates approximate to town level. Nominal capacities as orders of magnitude ; annual production history per site is not published consistently and is not included. Reliability: A established public data, B order of magnitude, C to be checked before commercial use. Data is built into the app and available offline. No named contacts are provided: use the LinkedIn search link or the site reception to identify the maintenance manager.",
+  kShown:"Sites shown", kSect:"In my territory", k50:"Within 50 km",
+  zA:"Territory Wallonia / North-East FR", zB:"MGH area", zC:"Outside MGH area",
+  loc:"Location", dist:"Distance", distTxt:"{d} km as the crow flies", status:"Status", cap:"Capacity", hist:"History", none:"Not specified",
+  target:"Targeting", rel:"Reliability", relA:"A · established public data", relB:"B · order of magnitude", relC:"C · to be checked before use",
+  appsH:"Gearbox applications to target", mghH:"MGH approach",
+  mgh:["Overhaul and repair of all brands, up to 50 t","Inspection, oil analysis, condition monitoring","Replacement and new supply, spare parts stock","24/7 on-site intervention, service contracts"],
+  contactH:"Contact", web:"Website", liSearch:"Find the maintenance manager", route:"Directions",
+  note:"No named contacts: not verifiable and subject to GDPR. Typical targets: maintenance manager, reliability engineer, MRO buyer, technical director.",
+  emptyH:"Select a site",
+  empty:["Tap a point on the map or a row in the table to zoom in and open the site card: group, capacity, status, history, gearbox applications and contact links.","On the road, « Near me » centres the map on your position and sorts sites by distance.","By default the map shows the MGH area. The « Territory » filter limits it to Wallonia, Hauts-de-France and Grand Est."],
+  csvHead:["Site","Sector","Sub-sector","Group","Country","City","Region","Lat","Lon","Capacity","Status","History","Web","Reliability"],
+  copied:"{n} sites copied: paste into Excel", copyFail:"Copy refused by the browser",
+  geoNA:"Geolocation not available on this device", geoWait:"Finding your position…", myPos:"My position",
+  geoRes:"{n} sites within {r}", europe:"all of Europe", geoDenied:"Allow location access in settings", geoFail:"Position not found, try again",
+  installed:"App installed"
+}};
+
+const CATS = {
+  sucre:{v:"--c-sucre",l:{fr:"Sucre / amidon",nl:"Suiker / zetmeel",en:"Sugar / starch"},apps:{
+    fr:["Diffuseurs (tour, DDS) : entraînements lents à couple élevé","Coupe-racines, laveurs, transporteurs et élévateurs à betteraves","Presses à pulpe, séchoirs rotatifs, centrifugeuses","Campagne de 100 à 130 jours : fenêtre d'intersaison idéale pour révisions (février à août)"],
+    nl:["Diffuseurs (toren, DDS): trage aandrijvingen met hoog koppel","Bietensnijders, wasinstallaties, transporteurs en elevatoren","Pulppersen, roterende drogers, centrifuges","Campagne van 100 tot 130 dagen: ideaal revisievenster buiten de campagne (februari tot augustus)"],
+    en:["Diffusers (tower, DDS): low-speed, high-torque drives","Beet slicers, washers, conveyors and elevators","Pulp presses, rotary dryers, centrifuges","100 to 130-day campaign: ideal off-season overhaul window (February to August)"]}},
+  acier:{v:"--c-acier",l:{fr:"Acier",nl:"Staal",en:"Steel"},apps:{
+    fr:["Laminoirs : réducteurs de cages, cages à pignons, bobineuses","Convertisseurs (basculement), ponts roulants de coulée (levage, translation)","Chaînes d'agglomération, tambours, broyeurs à charbon","Lignes de parachèvement : cisailles, galvanisation, décapage"],
+    nl:["Walserijen: tandwielkasten van walstuigen, kamwalstuigen, haspels","Convertors (kantelen), gietkranen (heffen, rijden)","Sinterbanden, trommels, kolenmolens","Afwerkingslijnen: scharen, verzinken, beitsen"],
+    en:["Rolling mills: stand gearboxes, pinion stands, coilers","Converters (tilting), ladle cranes (hoist, travel)","Sinter strands, drums, coal mills","Finishing lines: shears, galvanising, pickling"]}},
+  metal:{v:"--c-metal",l:{fr:"Métaux non ferreux / alu",nl:"Non-ferro / aluminium",en:"Non-ferrous / aluminium"},apps:{
+    fr:["Laminoirs aluminium à chaud et à froid","Ponts de service des cuves d'électrolyse","Broyeurs, fours rotatifs, convoyeurs de matières","Fonderies : malaxeurs, convoyeurs, ponts roulants"],
+    nl:["Warm- en koudwalserijen voor aluminium","Bedieningskranen van elektrolysecellen","Molens, draaiovens, materiaaltransporteurs","Gieterijen: mengers, transporteurs, rolbruggen"],
+    en:["Hot and cold aluminium rolling mills","Pot tending machines for electrolysis cells","Mills, rotary kilns, material conveyors","Foundries: mixers, conveyors, overhead cranes"]}},
+  ciment:{v:"--c-ciment",l:{fr:"Ciment / chaux",nl:"Cement / kalk",en:"Cement / lime"},apps:{
+    fr:["Fours rotatifs : entraînement couronne, réducteurs principaux et auxiliaires","Broyeurs à boulets et broyeurs verticaux : réducteurs planétaires lourds","Concasseurs, élévateurs à godets, transporteurs à bande","Ventilateurs de tirage, refroidisseurs à grille"],
+    nl:["Draaiovens: kransaandrijving, hoofd- en hulptandwielkasten","Kogelmolens en verticale molens: zware planetaire tandwielkasten","Brekers, bakkenelevatoren, bandtransporteurs","Trekventilatoren, roosterkoelers"],
+    en:["Rotary kilns: girth gear drive, main and auxiliary gearboxes","Ball mills and vertical roller mills: heavy planetary gearboxes","Crushers, bucket elevators, belt conveyors","Draught fans, grate coolers"]}},
+  carriere:{v:"--c-carriere",l:{fr:"Carrières / mines",nl:"Groeven / mijnen",en:"Quarries / mines"},apps:{
+    fr:["Concasseurs primaires et secondaires","Convoyeurs longue distance : réducteurs à arbres parallèles et coniques","Cribles, broyeurs, laveurs à sable","Treuils et skips (mines souterraines)"],
+    nl:["Primaire en secundaire brekers","Langeafstandstransporteurs: tandwielkasten met parallelle en haakse assen","Zeven, molens, zandwassers","Lieren en skips (ondergrondse mijnen)"],
+    en:["Primary and secondary crushers","Long-distance conveyors: parallel-shaft and bevel gearboxes","Screens, mills, sand washers","Winders and skips (underground mines)"]}},
+  plastique:{v:"--c-plastique",l:{fr:"Plastique / polymères",nl:"Kunststof / polymeren",en:"Plastics / polymers"},apps:{
+    fr:["Extrudeuses mono et bi-vis : réducteurs à palier de butée","Granulation des polymères (extrudeuses de forte puissance)","Souffleuses PET, presses à injecter, calandres","Mélangeurs internes, broyeurs de recyclage"],
+    nl:["Enkel- en dubbelschroefsextruders: tandwielkasten met druklager","Granulatie van polymeren (extruders met groot vermogen)","PET-blaasmachines, spuitgietmachines, kalanders","Interne mengers, recyclagemolens"],
+    en:["Single and twin-screw extruders: gearboxes with thrust bearing","Polymer pelletising (high-power extruders)","PET blow moulders, injection presses, calenders","Internal mixers, recycling granulators"]}},
+  papier:{v:"--c-papier",l:{fr:"Papier / verre",nl:"Papier / glas",en:"Paper / glass"},apps:{
+    fr:["Machines à papier : sécheries, presses, enrouleuses, calandres","Pulpeurs et raffineurs","Verre float : convoyeurs de bain, étenderies, mélangeurs","Ventilateurs et pompes de process"],
+    nl:["Papiermachines: droogpartijen, persen, oprollers, kalanders","Pulpers en refiners","Floatglas: badtransporteurs, koeloven, mengers","Procesventilatoren en -pompen"],
+    en:["Paper machines: dryer sections, presses, reels, calenders","Pulpers and refiners","Float glass: bath conveyors, lehrs, mixers","Process fans and pumps"]}}
+};
+const PAYS = {
+ fr:{BE:"Belgique",NL:"Pays-Bas",LU:"Luxembourg",FR:"France",DE:"Allemagne",AT:"Autriche",ES:"Espagne",IT:"Italie",GB:"Royaume-Uni",FI:"Finlande",SE:"Suède",PL:"Pologne",SK:"Slovaquie",CZ:"Tchéquie",RO:"Roumanie",CH:"Suisse",NO:"Norvège",DK:"Danemark",PT:"Portugal"},
+ nl:{BE:"België",NL:"Nederland",LU:"Luxemburg",FR:"Frankrijk",DE:"Duitsland",AT:"Oostenrijk",ES:"Spanje",IT:"Italië",GB:"Verenigd Koninkrijk",FI:"Finland",SE:"Zweden",PL:"Polen",SK:"Slowakije",CZ:"Tsjechië",RO:"Roemenië",CH:"Zwitserland",NO:"Noorwegen",DK:"Denemarken",PT:"Portugal"},
+ en:{BE:"Belgium",NL:"Netherlands",LU:"Luxembourg",FR:"France",DE:"Germany",AT:"Austria",ES:"Spain",IT:"Italy",GB:"United Kingdom",FI:"Finland",SE:"Sweden",PL:"Poland",SK:"Slovakia",CZ:"Czechia",RO:"Romania",CH:"Switzerland",NO:"Norway",DK:"Denmark",PT:"Portugal"}};
+
+// --- Langue
+function pickLang(){
+  try{const s=localStorage.getItem("mgh-lang");if(s&&I18N[s])return s}catch(e){}
+  const n=(navigator.language||"fr").slice(0,2).toLowerCase();return I18N[n]?n:"fr";
+}
+let lang=pickLang();
+const t=(k,v)=>{let s=I18N[lang][k]??I18N.fr[k];if(v&&typeof s==="string")for(const x in v)s=s.replace("{"+x+"}",v[x]);return s};
+const tx=s=>{if(!s||lang==="fr")return s||"";const e=TR[s];return e?e[LI[lang]]:s};   // traduction des données
+const cl=k=>CATS[k].l[lang]; const pn=p=>PAYS[lang][p]||p;
+
+const ZMGH = new Set(["BE","NL","LU","FR","ES","IT"]);
+const SECT = s => (s.p==="BE"&&s.r==="Wallonie") || (s.p==="FR"&&(s.r==="Hauts-de-France"||s.r==="Grand Est"));
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+let active = new Set(Object.keys(CATS)), sortK="n", sortD=1, selId=null, me=null;
+const meLayer = [];
+try{ const z=localStorage.getItem("mgh-zone"); if(z) document.getElementById("zone").value=z; }catch(e){}
+
+const pSel=document.getElementById("pays");
+const catBox=document.getElementById("cats");
+catBox.addEventListener("click",e=>{const b=e.target.closest(".chip");if(!b)return;const k=b.dataset.c;active.has(k)?active.delete(k):active.add(k);b.setAttribute("aria-pressed",active.has(k));render()});
+
+function applyLang(){
+  document.documentElement.lang=lang;
+  document.querySelectorAll("[data-i]").forEach(el=>el.textContent=t(el.dataset.i));
+  document.querySelectorAll("[data-ip]").forEach(el=>el.placeholder=t(el.dataset.ip));
+  document.querySelectorAll("[data-ia]").forEach(el=>el.setAttribute("aria-label",t(el.dataset.ia)));
+  document.querySelectorAll("#langs button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.l===lang));
+  document.title=lang==="fr"?"Carte MGH":lang==="nl"?"Kaart MGH":"MGH Map";
+  // pays
+  const cur=pSel.value;
+  pSel.innerHTML=`<option value="">${t("all")}</option>`+[...new Set(SITES.map(s=>s.p))].sort((a,b)=>pn(a).localeCompare(pn(b),lang)).map(p=>`<option value="${p}">${esc(pn(p))}</option>`).join("");
+  pSel.value=cur;
+  // secteurs + légende
+  catBox.innerHTML=`<label class="lbl">${t("sectors")}</label>`+Object.entries(CATS).map(([k,c])=>`<button type="button" class="chip" aria-pressed="${active.has(k)}" data-c="${k}"><i style="background:var(${c.v})"></i>${esc(cl(k))}</button>`).join("");
+  document.getElementById("legend").innerHTML=Object.keys(CATS).map(k=>`<div><i style="background:var(${CATS[k].v})"></i>${esc(cl(k))}</div>`).join("");
+  document.getElementById("foot").innerHTML=t("foot",{n:SITES.length});
+  meLayer.forEach(l=>l.setTooltipContent(t("myPos")));
+  if(selId!==null) select(selId,"nomove"); else { emptyFiche(); render(); }
+}
+document.getElementById("langs").addEventListener("click",e=>{
+  const b=e.target.closest("button");if(!b||b.dataset.l===lang)return;
+  lang=b.dataset.l;try{localStorage.setItem("mgh-lang",lang)}catch(_){}
+  applyLang();
+});
+
+// --- Carte
+const map=L.map("map",{zoomControl:true,attributionControl:false,minZoom:3,maxZoom:12,zoomSnap:.5,preferCanvas:true}).setView([49,6],4.5);
+const baseStyle=()=>({color:css("--border"),weight:.8,fillColor:css("--land"),fillOpacity:1});
+const base=L.geoJSON(EU,{style:baseStyle,interactive:false}).addTo(map);
+const layer=L.layerGroup().addTo(map);
+function radius(){const z=map.getZoom();return z<5?4:z<7?6:z<9?8:10}
+function rad(){return +document.getElementById("rad").value}
+
+function filtered(){
+  const zone=document.getElementById("zone").value, p=pSel.value, q=document.getElementById("q").value.trim().toLowerCase();
+  return SITES.filter(s=>active.has(s.c)
+    && (zone==="all" || (zone==="mgh"?ZMGH.has(s.p):SECT(s)))
+    && (!p||s.p===p)
+    && (!me || !rad() || s.d<=rad())
+    && (!q || [s.n,s.g,s.v,s.r,tx(s.r),s.sub||"",tx(s.sub),pn(s.p)].join(" ").toLowerCase().includes(q)));
+}
+function zoneOf(s){return SECT(s)?["zA",t("zA")]:ZMGH.has(s.p)?["zB",t("zB")]:["zC",t("zC")]}
+const val=(s,k)=>k==="c"?cl(s.c):k==="p"?pn(s.p):k==="cap"||k==="st"?tx(s[k]):s[k];
+
+function render(){
+  const list=filtered();
+  layer.clearLayers();
+  const r=radius();
+  list.forEach(s=>{
+    const m=L.circleMarker([s.la,s.lo],{radius:s.id===selId?r+4:r,color:s.id===selId?css("--fg"):css("--panel"),weight:s.id===selId?2.5:1.2,fillColor:css(CATS[s.c].v),fillOpacity:.92});
+    m.bindTooltip(`<b>${esc(s.n)}</b><br>${esc(s.v)} · ${esc(pn(s.p))}`,{direction:"top",offset:[0,-6]});
+    m.on("click",()=>select(s.id,true));
+    m.addTo(layer);
+  });
+  const cnt=k=>list.filter(s=>s.c===k).length;
+  document.getElementById("kpis").innerHTML=`<div class="kpi"><b>${list.length}</b><small>${t("kShown")}</small></div>`+
+    `<div class="kpi"><b>${list.filter(SECT).length}</b><small>${t("kSect")}</small></div>`+
+    (me?`<div class="kpi"><b>${list.filter(s=>s.d<=50).length}</b><small>${t("k50")}</small></div>`:"")+
+    Object.keys(CATS).map(k=>`<div class="kpi"><b style="color:var(${CATS[k].v})">${cnt(k)}</b><small>${esc(cl(k))}</small></div>`).join("");
+  const rows=[...list].sort((a,b)=>{const x=val(a,sortK),y=val(b,sortK);return (typeof x==="number"?x-y:String(x).localeCompare(String(y),lang))*sortD});
+  document.getElementById("thd").hidden=!me;
+  document.getElementById("tb").innerHTML=rows.map(s=>`<tr data-id="${s.id}">${me?`<td class="mono">${Math.round(s.d)} km</td>`:""}<td><b>${esc(s.n)}</b></td><td><span class="dot" style="background:var(${CATS[s.c].v})"></span>${esc(cl(s.c))}</td><td>${esc(s.g)}</td><td>${esc(pn(s.p))}</td><td>${esc(s.v)}</td><td>${esc(tx(s.cap))}</td><td>${esc(tx(s.st))}</td><td class="mono">${s.f}</td></tr>`).join("");
+}
+function li(s){return "https://www.linkedin.com/search/results/people/?keywords="+encodeURIComponent(`maintenance ${s.g.split(" (")[0]} ${s.v.split(" (")[0]}`)}
+function select(id,fromMap){
+  selId=id; const s=SITES[id], c=CATS[s.c], z=zoneOf(s);
+  const ok=s.st.startsWith("En activité");
+  document.getElementById("fiche").innerHTML=`
+    <span class="cat" style="background:var(${c.v})">${esc(cl(s.c))}</span>
+    <h2 class="name">${esc(s.n)}</h2>
+    <div class="sub">${esc(s.g)}${s.sub?" · "+esc(tx(s.sub)):""}</div>
+    <dl>
+      <dt>${t("loc")}</dt><dd>${esc(s.v)}, ${esc(tx(s.r))} · ${esc(pn(s.p))}<br><span class="mono">${s.la.toFixed(3)}, ${s.lo.toFixed(3)}</span></dd>
+      ${me?`<dt>${t("dist")}</dt><dd>${t("distTxt",{d:Math.round(s.d)})}</dd>`:""}
+      <dt>${t("status")}</dt><dd><span class="pill ${ok?"ok":"warn"}">${esc(tx(s.st))}</span></dd>
+      <dt>${t("cap")}</dt><dd>${esc(tx(s.cap))}</dd>
+      <dt>${t("hist")}</dt><dd>${s.h?esc(tx(s.h)):`<span class="fiab">${t("none")}</span>`}</dd>
+      <dt>${t("target")}</dt><dd><span class="pill ${z[0]}">${z[1]}</span></dd>
+      <dt>${t("rel")}</dt><dd class="fiab">${t(s.f==="A"?"relA":s.f==="B"?"relB":"relC")}</dd>
+    </dl>
+    <h3>${t("appsH")}</h3>
+    <ul class="apps">${c.apps[lang].map(a=>`<li>${esc(a)}</li>`).join("")}</ul>
+    <h3>${t("mghH")}</h3>
+    <ul class="apps">${t("mgh").map(a=>`<li>${esc(a)}</li>`).join("")}</ul>
+    <h3>${t("contactH")}</h3>
+    <div class="links">${s.w?`<a href="${esc(s.w)}" target="_blank" rel="noopener">${t("web")}</a>`:""}<a href="${li(s)}" target="_blank" rel="noopener">${t("liSearch")}</a><a href="https://www.google.com/maps/dir/?api=1&destination=${s.la},${s.lo}" target="_blank" rel="noopener">${t("route")}</a></div>
+    <p class="note">${t("note")}</p>`;
+  if(fromMap!=="nomove"){
+    map.flyTo([s.la,s.lo],Math.max(map.getZoom(),9),{duration:.8});
+    if(window.innerWidth<900) document.getElementById("fiche").scrollIntoView({behavior:"smooth",block:"start"});
+  }
+  render();
+}
+function emptyFiche(){document.getElementById("fiche").innerHTML=`<div class="empty"><h2>${t("emptyH")}</h2>${t("empty").map(p=>`<p>${esc(p)}</p>`).join("")}</div>`}
+
+document.getElementById("tb").addEventListener("click",e=>{const tr=e.target.closest("tr");if(tr)select(+tr.dataset.id,true)});
+document.querySelector("thead").addEventListener("click",e=>{const th=e.target.closest("th");if(!th)return;const k=th.dataset.k;sortD=sortK===k?-sortD:1;sortK=k;render()});
+["zone","pays"].forEach(id=>document.getElementById(id).addEventListener("change",()=>{try{localStorage.setItem("mgh-zone",document.getElementById("zone").value)}catch(e){}render();fit()}));
+document.getElementById("q").addEventListener("input",render);
+document.getElementById("reset").addEventListener("click",()=>{selId=null;emptyFiche();render();fit()});
+map.on("zoomend",render);
+function fit(){const l=filtered();if(l.length)map.fitBounds(L.latLngBounds(l.map(s=>[s.la,s.lo])).pad(.15),{maxZoom:8});}
+
+const toast=(m)=>{const el=document.getElementById("toast");el.textContent=m;el.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>el.hidden=true,3000)};
+document.getElementById("csv").addEventListener("click",async()=>{
+  const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
+  const list=filtered();
+  const txt=[t("csvHead").join(";")].concat(list.map(s=>[s.n,cl(s.c),tx(s.sub),s.g,pn(s.p),s.v,tx(s.r),s.la,s.lo,tx(s.cap),tx(s.st),tx(s.h),s.w,s.f].map(q).join(";"))).join("\n");
+  try{await navigator.clipboard.writeText(txt);toast(t("copied",{n:list.length}));}catch(e){toast(t("copyFail"));}
+});
+const mq=matchMedia("(prefers-color-scheme: dark)");
+const restyle=()=>{base.setStyle(baseStyle());render()};
+mq.addEventListener?.("change",restyle);
+new MutationObserver(restyle).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
+
+// --- Géolocalisation
+function hav(a,b,c,d){const R=6371,r=Math.PI/180,x=Math.sin((c-a)*r/2)**2+Math.cos(a*r)*Math.cos(c*r)*Math.sin((d-b)*r/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
+document.getElementById("geo").addEventListener("click",()=>{
+  if(!navigator.geolocation){toast(t("geoNA"));return}
+  toast(t("geoWait"));
+  navigator.geolocation.getCurrentPosition(pos=>{
+    me={la:pos.coords.latitude,lo:pos.coords.longitude};
+    SITES.forEach(s=>s.d=hav(me.la,me.lo,s.la,s.lo));
+    meLayer.forEach(l=>map.removeLayer(l));meLayer.length=0;
+    meLayer.push(L.circleMarker([me.la,me.lo],{radius:9,color:"#fff",weight:3,fillColor:"#1a73e8",fillOpacity:1}).bindTooltip(t("myPos")).addTo(map));
+    document.getElementById("rad").hidden=false;document.getElementById("radl").hidden=false;
+    document.getElementById("zone").value="all";
+    sortK="d";sortD=1;render();
+    const r=rad()||100;map.fitBounds(L.latLng(me.la,me.lo).toBounds(r*2000));
+    toast(t("geoRes",{n:filtered().length,r:rad()?rad()+" km":t("europe")}));
+  },err=>toast(err.code===1?t("geoDenied"):t("geoFail")),{enableHighAccuracy:false,timeout:15000,maximumAge:300000});
+});
+document.getElementById("rad").addEventListener("change",()=>{render();if(me){const r=rad();r?map.fitBounds(L.latLng(me.la,me.lo).toBounds(r*2000)):fit()}});
+
+// --- Installation (Android / Chrome)
+let deferredPrompt=null;
+const ib=document.getElementById("install");
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;ib.hidden=false});
+ib.addEventListener("click",async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;ib.hidden=true});
+window.addEventListener("appinstalled",()=>{ib.hidden=true;toast(t("installed"))});
+
+// --- Hors ligne
+const net=document.getElementById("net");const upd=()=>net.hidden=navigator.onLine;
+addEventListener("online",upd);addEventListener("offline",upd);upd();
+if("serviceWorker" in navigator){addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
+
+applyLang();fit();
+</script>
+</body>
+</html>

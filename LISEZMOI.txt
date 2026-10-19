@@ -1,0 +1,33 @@
+CARTE MGH : APPLICATION ANDROID INSTALLABLE (PWA)
+Version 2026-10-19.2 · 230 sites · FR / NL / EN
+
+1. MISE EN LIGNE (une seule fois, HTTPS obligatoire)
+   Option rapide : app.netlify.com/drop, puis glisser le dossier "carte-mgh" entier.
+   Netlify fournit une adresse https://xxxx.netlify.app en moins d'une minute.
+   Option MGH : déposer le contenu du dossier sur un serveur web HTTPS de l'entreprise
+   (sous-dossier accepté, ex. https://outils.mgh.be/carte/).
+   Ne pas ouvrir index.html directement depuis le téléphone : l'installation exige HTTPS.
+
+2. INSTALLATION SUR ANDROID
+   Ouvrir l'adresse dans Chrome.
+   Toucher le bouton vert "Installer l'application", ou menu ⋮ > "Installer l'application"
+   (selon la version : "Ajouter à l'écran d'accueil").
+   L'icône "Carte MGH" apparaît dans le tiroir d'applications. Ouverture plein écran.
+
+3. UTILISATION
+   Langue : sélecteur FR / NL / EN dans l'en-tête. Au premier lancement, l'application
+   reprend la langue du téléphone ; le choix est ensuite mémorisé sur l'appareil.
+   "Autour de moi" : centre sur votre position, trie par distance, filtre par rayon.
+   "Itinéraire" dans la fiche : ouvre la navigation Google Maps vers le site.
+   Hors connexion : carte, fiches et tableau restent consultables après une première ouverture en ligne.
+   Les liens LinkedIn, sites web et itinéraire nécessitent une connexion.
+
+4. MISE À JOUR DES DONNÉES
+   Remplacer data.js (et index.html si besoin), puis incrémenter VERSION dans sw.js.
+   Les traductions des fiches sont dans data.js (MGH_TR) : tout nouveau texte FR
+   sans traduction s'affiche en français dans les versions NL et EN.
+   Les téléphones récupèrent la nouvelle version à la prochaine ouverture en ligne.
+
+CONTENU
+   index.html, data.js (sites + fond de carte), leaflet.js, sw.js (hors ligne),
+   manifest.webmanifest, icons/, fonts/
