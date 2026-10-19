@@ -1,5 +1,6 @@
 CARTE MGH : APPLICATION ANDROID INSTALLABLE (PWA)
-Version 2026-10-19.2 · 230 sites · FR / NL / EN
+Version 2026-10-19.4 · 5 706 sites · FR / NL / EN
+   Carrières France : registre ICPE complet (Géorisques) · Carrières Wallonie : registre SPW
 
 1. MISE EN LIGNE (une seule fois, HTTPS obligatoire)
    Option rapide : app.netlify.com/drop, puis glisser le dossier "carte-mgh" entier.
@@ -18,6 +19,9 @@ Version 2026-10-19.2 · 230 sites · FR / NL / EN
    Langue : sélecteur FR / NL / EN dans l'en-tête. Au premier lancement, l'application
    reprend la langue du téléphone ; le choix est ensuite mémorisé sur l'appareil.
    "Autour de moi" : centre sur votre position, trie par distance, filtre par rayon.
+   "Concassage" : filtre les carrières françaises par puissance de concassage installée (≥ 200 à ≥ 2 000 kW).
+   "Statut" : par défaut, les sites en fin d'exploitation sont masqués.
+   Tableau limité aux 400 premières lignes ; la carte affiche toujours tous les sites filtrés.
    "Itinéraire" dans la fiche : ouvre la navigation Google Maps vers le site.
    Hors connexion : carte, fiches et tableau restent consultables après une première ouverture en ligne.
    Les liens LinkedIn, sites web et itinéraire nécessitent une connexion.

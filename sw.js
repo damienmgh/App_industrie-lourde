@@ -1,6 +1,6 @@
 // Service worker Carte MGH : fonctionnement hors ligne.
 // Après chaque mise à jour de data.js ou index.html, incrémenter VERSION.
-const VERSION = "2026-10-19.2";
+const VERSION = "2026-10-19.4";
 const CACHE = "carte-mgh-" + VERSION;
 const FILES = [
   "./",

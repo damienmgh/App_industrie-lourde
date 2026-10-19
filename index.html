@@ -122,6 +122,7 @@ td .dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right
 .btn.inst{background:var(--c-plastique)}
 .offline{font-size:11px;color:#c9cfe4;border:1px solid #6d7bb0;border-radius:999px;padding:2px 8px;margin-left:8px}
 header .hd{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px}
+.more{margin:0;color:var(--muted);font-size:13px}
 #toast{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--navy);color:#fff;padding:8px 14px;border-radius:4px;font-weight:600}
 @media (max-width:900px){.main{grid-template-columns:minmax(0,1fr)}#map{height:460px}aside{max-height:none}}
 @media (prefers-reduced-motion:reduce){.leaflet-zoom-anim .leaflet-zoom-animated{transition:none}}
@@ -153,12 +154,16 @@ header .hr{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px}
     <select id="zone">
       <option value="all" data-i="zoneAll">Toute l'Europe</option>
       <option value="mgh" selected data-i="zoneMgh">Zone MGH (BE, NL, LU, FR, ES, IT)</option>
-      <option value="sect" data-i="zoneSect">Secteur Wallonie + Nord/Est France</option>
+      <option value="sect" data-i="zoneSect">Secteur Wallonie + Nord-Ouest France</option>
     </select>
     <label class="lbl" for="pays" data-i="country">Pays</label>
     <select id="pays"></select>
     <label class="lbl" for="q" data-i="search">Recherche</label>
     <input type="search" id="q" data-ip="searchPh" placeholder="Site, groupe, ville…">
+    <label class="lbl" for="kwf" data-i="kwF">Concassage</label>
+    <select id="kwf"><option value="0" data-i="kwAll">Toutes puissances</option><option value="200">≥ 200 kW</option><option value="550">≥ 550 kW</option><option value="1000">≥ 1 000 kW</option><option value="2000">≥ 2 000 kW</option></select>
+    <label class="lbl" for="act" data-i="act">Statut</label>
+    <select id="act"><option value="on" data-i="actOn" selected>En activité seulement</option><option value="all" data-i="actAll">Tous statuts</option></select>
     <button class="btn geo" id="geo" type="button" data-i="geo">Autour de moi</button>
     <label class="lbl" for="rad" id="radl" hidden data-i="radius">Rayon</label>
     <select id="rad" hidden><option value="0" data-i="unlimited">Illimité</option><option value="50">50 km</option><option value="100" selected>100 km</option><option value="200">200 km</option><option value="400">400 km</option></select>
@@ -173,6 +178,7 @@ header .hr{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px}
   <div class="tablebox"><table><thead><tr>
     <th data-k="d" id="thd" hidden data-i="thDist">Dist.</th><th data-k="n" data-i="thSite">Site</th><th data-k="c" data-i="thSector">Secteur</th><th data-k="g" data-i="thGroup">Groupe</th><th data-k="p" data-i="thCountry">Pays</th><th data-k="v" data-i="thCity">Ville</th><th data-k="cap" data-i="thCap">Capacité</th><th data-k="st" data-i="thStatus">Statut</th><th data-k="f" data-i="thRel">Fiab.</th>
   </tr></thead><tbody id="tb"></tbody></table></div>
+  <p class="more" id="more" hidden></p>
   <p class="foot" id="foot"></p>
 </div>
 <div id="toast" hidden></div>
@@ -186,13 +192,13 @@ const LI = {fr:-1, nl:0, en:1};
 const I18N = {
 fr:{
   title:"Carte industrie lourde", subtitle:"· prospection réducteurs", offline:"Hors ligne",
-  sectors:"Secteurs", zone:"Zone", zoneAll:"Toute l'Europe", zoneMgh:"Zone MGH (BE, NL, LU, FR, ES, IT)", zoneSect:"Secteur Wallonie + Nord/Est France",
+  sectors:"Secteurs", zone:"Zone", zoneAll:"Toute l'Europe", zoneMgh:"Zone MGH (BE, NL, LU, FR, ES, IT)", zoneSect:"Secteur Wallonie + Nord-Ouest France",
   country:"Pays", all:"Tous", search:"Recherche", searchPh:"Site, groupe, ville…", geo:"Autour de moi", radius:"Rayon", unlimited:"Illimité",
   reset:"Vue Europe", install:"Installer l'application", csv:"Copier la sélection (CSV)", mapLabel:"Carte des sites",
   thDist:"Dist.", thSite:"Site", thSector:"Secteur", thGroup:"Groupe", thCountry:"Pays", thCity:"Ville", thCap:"Capacité", thStatus:"Statut", thRel:"Fiab.",
-  foot:"<b>Limites.</b> Base de prospection initiale de {n} sites, construite à partir de connaissances publiques et vérifiée ponctuellement le 15/10/2026 (fermetures sucrières FR, Port Talbot, Dunkerque, Craemer, Greif Ede). Coordonnées approchées à l'échelle de la commune. Capacités nominales en ordre de grandeur ; les historiques annuels de production par site ne sont pas publiés de façon homogène et ne figurent pas ici. Indice de fiabilité : A donnée publique établie, B ordre de grandeur, C à vérifier avant usage commercial. Données intégrées à l'application : consultables hors connexion. Aucune coordonnée nominative n'est fournie : utiliser le lien de recherche LinkedIn ou l'accueil du site pour identifier le responsable maintenance.",
+  foot:"<b>Limites.</b> Base de prospection de {n} sites. Carrières et plateformes de concassage françaises : registre officiel ICPE (Géorisques, rubriques 2510 et 2515, téléchargé le 19/10/2026), avec puissance de concassage installée. Carrières wallonnes : registre SPW des carrières en activité (2010-2022), avec surface exploitée. Autres sites : recherche publique vérifiée ponctuellement le 15/10/2026 (fermetures sucrières FR, Port Talbot, Dunkerque, Craemer, Greif Ede). Coordonnées approchées à l'échelle de la commune. Capacités nominales en ordre de grandeur ; les historiques annuels de production par site ne sont pas publiés de façon homogène et ne figurent pas ici. Indice de fiabilité : A donnée publique établie, B ordre de grandeur, C à vérifier avant usage commercial. Données intégrées à l'application : consultables hors connexion. Aucune coordonnée nominative n'est fournie : utiliser le lien de recherche LinkedIn ou l'accueil du site pour identifier le responsable maintenance.",
   kShown:"Sites affichés", kSect:"Dans mon secteur", k50:"À moins de 50 km",
-  zA:"Secteur Wallonie / Nord-Est FR", zB:"Zone MGH", zC:"Hors zone MGH",
+  zA:"Secteur Wallonie / Nord-Ouest FR", zB:"Zone MGH", zC:"Hors zone MGH",
   loc:"Localisation", dist:"Distance", distTxt:"{d} km à vol d'oiseau", status:"Statut", cap:"Capacité", hist:"Historique", none:"Non renseigné",
   target:"Ciblage", rel:"Fiabilité", relA:"A · donnée publique établie", relB:"B · ordre de grandeur", relC:"C · à vérifier avant usage",
   appsH:"Applications réducteurs à cibler", mghH:"Angle MGH",
@@ -200,22 +206,23 @@ fr:{
   contactH:"Contact", web:"Site web", liSearch:"Rechercher le resp. maintenance", route:"Itinéraire",
   note:"Coordonnées nominatives non fournies : non vérifiables et soumises au RGPD. Cibles types : responsable maintenance, ingénieur fiabilité, acheteur MRO, directeur technique.",
   emptyH:"Sélectionnez un site",
-  empty:["Touchez un point sur la carte ou une ligne du tableau pour zoomer sur le site et afficher sa fiche : groupe, capacité, statut, historique, applications réducteurs et liens de contact.","En déplacement, « Autour de moi » centre la carte sur votre position et trie les sites par distance.","Par défaut, la carte affiche la zone MGH. Le filtre « Secteur » restreint à la Wallonie, aux Hauts-de-France et au Grand Est."],
-  csvHead:["Site","Secteur","Sous-secteur","Groupe","Pays","Ville","Région","Lat","Lon","Capacité","Statut","Historique","Web","Fiabilité"],
+  empty:["Touchez un point sur la carte ou une ligne du tableau pour zoomer sur le site et afficher sa fiche : groupe, capacité, statut, historique, applications réducteurs et liens de contact.","En déplacement, « Autour de moi » centre la carte sur votre position et trie les sites par distance.","Par défaut, la carte affiche la zone MGH. Le filtre « Secteur » restreint à la Wallonie et au Nord-Ouest de la France (Hauts-de-France, Normandie, Bretagne, Pays de la Loire)."],
+  csvHead:["Site","Secteur","Sous-secteur","Groupe","Pays","Ville","Région","Lat","Lon","Capacité","Puissance concassage kW","Statut","Historique","Web","Fiabilité"],
   copied:"{n} sites copiés : collez dans Excel", copyFail:"Copie refusée par le navigateur",
   geoNA:"Géolocalisation indisponible sur cet appareil", geoWait:"Recherche de votre position…", myPos:"Ma position",
   geoRes:"{n} sites dans un rayon de {r}", europe:"toute l'Europe", geoDenied:"Autorisez l'accès à la position dans les réglages", geoFail:"Position introuvable, réessayez",
-  installed:"Application installée"
+  installed:"Application installée",
+  kwF:"Concassage",kwAll:"Toutes puissances",act:"Statut",actOn:"En activité seulement",actAll:"Tous statuts",more:"Tableau limité aux {s} premières lignes sur {n}. Affinez les filtres pour voir le reste ; la carte affiche tous les sites.",src:"Source",srcIcpe:"Registre ICPE, Géorisques (données 2026)",srcManual:"Base MGH, recherche publique",srcSpw:"Registre des carrières actives, SPW Wallonie",geoFiche:"Fiche Géorisques",kwT:"Puissance concassage"
 },
 nl:{
   title:"Kaart zware industrie", subtitle:"· prospectie tandwielkasten", offline:"Offline",
-  sectors:"Sectoren", zone:"Zone", zoneAll:"Heel Europa", zoneMgh:"MGH-zone (BE, NL, LU, FR, ES, IT)", zoneSect:"Regio Wallonië + Noord/Oost-Frankrijk",
+  sectors:"Sectoren", zone:"Zone", zoneAll:"Heel Europa", zoneMgh:"MGH-zone (BE, NL, LU, FR, ES, IT)", zoneSect:"Regio Wallonië + Noordwest-Frankrijk",
   country:"Land", all:"Alle", search:"Zoeken", searchPh:"Site, groep, stad…", geo:"In mijn buurt", radius:"Straal", unlimited:"Onbeperkt",
   reset:"Overzicht Europa", install:"App installeren", csv:"Selectie kopiëren (CSV)", mapLabel:"Kaart van de sites",
   thDist:"Afst.", thSite:"Site", thSector:"Sector", thGroup:"Groep", thCountry:"Land", thCity:"Stad", thCap:"Capaciteit", thStatus:"Status", thRel:"Betr.",
-  foot:"<b>Beperkingen.</b> Eerste prospectiebestand van {n} sites, opgebouwd uit openbare informatie en steekproefsgewijs gecontroleerd op 15/10/2026 (sluitingen Franse suikerfabrieken, Port Talbot, Duinkerke, Craemer, Greif Ede). Coördinaten benaderd op gemeenteniveau. Nominale capaciteiten als grootteorde ; jaarlijkse productiecijfers per site worden niet uniform gepubliceerd en zijn hier niet opgenomen. Betrouwbaarheid: A vaststaand openbaar gegeven, B grootteorde, C te controleren vóór commercieel gebruik. De gegevens zitten in de app en zijn offline raadpleegbaar. Er worden geen namen van contactpersonen gegeven: gebruik de LinkedIn-zoeklink of het onthaal van de site om de onderhoudsverantwoordelijke te vinden.",
+  foot:"<b>Beperkingen.</b> Prospectiebestand van {n} sites. Franse groeven en breekinstallaties: officieel ICPE-register (Géorisques, rubrieken 2510 en 2515, gedownload op 19/10/2026), met geïnstalleerd breekvermogen. Waalse groeven: SPW-register van actieve groeven (2010-2022), met ontgonnen oppervlakte. Overige sites: openbaar onderzoek, steekproefsgewijs gecontroleerd op 15/10/2026 (sluitingen Franse suikerfabrieken, Port Talbot, Duinkerke, Craemer, Greif Ede). Coördinaten benaderd op gemeenteniveau. Nominale capaciteiten als grootteorde ; jaarlijkse productiecijfers per site worden niet uniform gepubliceerd en zijn hier niet opgenomen. Betrouwbaarheid: A vaststaand openbaar gegeven, B grootteorde, C te controleren vóór commercieel gebruik. De gegevens zitten in de app en zijn offline raadpleegbaar. Er worden geen namen van contactpersonen gegeven: gebruik de LinkedIn-zoeklink of het onthaal van de site om de onderhoudsverantwoordelijke te vinden.",
   kShown:"Getoonde sites", kSect:"In mijn regio", k50:"Binnen 50 km",
-  zA:"Regio Wallonië / Noord-Oost FR", zB:"MGH-zone", zC:"Buiten MGH-zone",
+  zA:"Regio Wallonië / Noordwest-FR", zB:"MGH-zone", zC:"Buiten MGH-zone",
   loc:"Locatie", dist:"Afstand", distTxt:"{d} km in vogelvlucht", status:"Status", cap:"Capaciteit", hist:"Historiek", none:"Niet ingevuld",
   target:"Doelgroep", rel:"Betrouwbaarheid", relA:"A · vaststaand openbaar gegeven", relB:"B · grootteorde", relC:"C · te controleren vóór gebruik",
   appsH:"Toepassingen tandwielkasten", mghH:"Aanpak MGH",
@@ -223,22 +230,23 @@ nl:{
   contactH:"Contact", web:"Website", liSearch:"Onderhoudsverantwoordelijke zoeken", route:"Route",
   note:"Geen namen van contactpersonen: niet verifieerbaar en onderworpen aan de AVG. Typische doelgroep: onderhoudsverantwoordelijke, betrouwbaarheidsingenieur, MRO-aankoper, technisch directeur.",
   emptyH:"Kies een site",
-  empty:["Tik op een punt op de kaart of op een rij in de tabel om in te zoomen en de fiche te tonen: groep, capaciteit, status, historiek, toepassingen tandwielkasten en contactlinks.","Onderweg centreert « In mijn buurt » de kaart op uw positie en sorteert de sites op afstand.","Standaard toont de kaart de MGH-zone. De filter « Regio » beperkt tot Wallonië, Hauts-de-France en Grand Est."],
-  csvHead:["Site","Sector","Subsector","Groep","Land","Stad","Regio","Lat","Lon","Capaciteit","Status","Historiek","Web","Betrouwbaarheid"],
+  empty:["Tik op een punt op de kaart of op een rij in de tabel om in te zoomen en de fiche te tonen: groep, capaciteit, status, historiek, toepassingen tandwielkasten en contactlinks.","Onderweg centreert « In mijn buurt » de kaart op uw positie en sorteert de sites op afstand.","Standaard toont de kaart de MGH-zone. De filter « Regio » beperkt tot Wallonië en Noordwest-Frankrijk (Hauts-de-France, Normandië, Bretagne, Pays de la Loire)."],
+  csvHead:["Site","Sector","Subsector","Groep","Land","Stad","Regio","Lat","Lon","Capaciteit","Breekvermogen kW","Status","Historiek","Web","Betrouwbaarheid"],
   copied:"{n} sites gekopieerd: plak in Excel", copyFail:"Kopiëren geweigerd door de browser",
   geoNA:"Geolocatie niet beschikbaar op dit toestel", geoWait:"Uw positie wordt gezocht…", myPos:"Mijn positie",
   geoRes:"{n} sites binnen een straal van {r}", europe:"heel Europa", geoDenied:"Sta toegang tot de locatie toe in de instellingen", geoFail:"Positie niet gevonden, probeer opnieuw",
-  installed:"App geïnstalleerd"
+  installed:"App geïnstalleerd",
+  kwF:"Breken",kwAll:"Alle vermogens",act:"Status",actOn:"Alleen in bedrijf",actAll:"Alle statussen",more:"Tabel beperkt tot de eerste {s} rijen van {n}. Verfijn de filters om de rest te zien ; de kaart toont alle sites.",src:"Bron",srcIcpe:"ICPE-register, Géorisques (gegevens 2026)",srcManual:"MGH-bestand, openbaar onderzoek",srcSpw:"Register van actieve groeven, SPW Wallonië",geoFiche:"Géorisques-fiche",kwT:"Breekvermogen"
 },
 en:{
   title:"Heavy industry map", subtitle:"· gearbox prospecting", offline:"Offline",
-  sectors:"Sectors", zone:"Zone", zoneAll:"All of Europe", zoneMgh:"MGH area (BE, NL, LU, FR, ES, IT)", zoneSect:"Territory: Wallonia + North/East France",
+  sectors:"Sectors", zone:"Zone", zoneAll:"All of Europe", zoneMgh:"MGH area (BE, NL, LU, FR, ES, IT)", zoneSect:"Territory: Wallonia + North-West France",
   country:"Country", all:"All", search:"Search", searchPh:"Site, group, city…", geo:"Near me", radius:"Radius", unlimited:"Unlimited",
   reset:"Europe view", install:"Install app", csv:"Copy selection (CSV)", mapLabel:"Map of sites",
   thDist:"Dist.", thSite:"Site", thSector:"Sector", thGroup:"Group", thCountry:"Country", thCity:"City", thCap:"Capacity", thStatus:"Status", thRel:"Rel.",
-  foot:"<b>Limitations.</b> Initial prospecting base of {n} sites, built from public information and spot-checked on 15/10/2026 (French sugar closures, Port Talbot, Dunkirk, Craemer, Greif Ede). Coordinates approximate to town level. Nominal capacities as orders of magnitude ; annual production history per site is not published consistently and is not included. Reliability: A established public data, B order of magnitude, C to be checked before commercial use. Data is built into the app and available offline. No named contacts are provided: use the LinkedIn search link or the site reception to identify the maintenance manager.",
+  foot:"<b>Limitations.</b> Prospecting base of {n} sites. French quarries and crushing plants: official ICPE register (Géorisques, headings 2510 and 2515, downloaded 19/10/2026), with installed crushing power. Walloon quarries: SPW register of active quarries (2010-2022), with worked area. Other sites: public research spot-checked on 15/10/2026 (French sugar closures, Port Talbot, Dunkirk, Craemer, Greif Ede). Coordinates approximate to town level. Nominal capacities as orders of magnitude ; annual production history per site is not published consistently and is not included. Reliability: A established public data, B order of magnitude, C to be checked before commercial use. Data is built into the app and available offline. No named contacts are provided: use the LinkedIn search link or the site reception to identify the maintenance manager.",
   kShown:"Sites shown", kSect:"In my territory", k50:"Within 50 km",
-  zA:"Territory Wallonia / North-East FR", zB:"MGH area", zC:"Outside MGH area",
+  zA:"Territory Wallonia / North-West FR", zB:"MGH area", zC:"Outside MGH area",
   loc:"Location", dist:"Distance", distTxt:"{d} km as the crow flies", status:"Status", cap:"Capacity", hist:"History", none:"Not specified",
   target:"Targeting", rel:"Reliability", relA:"A · established public data", relB:"B · order of magnitude", relC:"C · to be checked before use",
   appsH:"Gearbox applications to target", mghH:"MGH approach",
@@ -246,12 +254,13 @@ en:{
   contactH:"Contact", web:"Website", liSearch:"Find the maintenance manager", route:"Directions",
   note:"No named contacts: not verifiable and subject to GDPR. Typical targets: maintenance manager, reliability engineer, MRO buyer, technical director.",
   emptyH:"Select a site",
-  empty:["Tap a point on the map or a row in the table to zoom in and open the site card: group, capacity, status, history, gearbox applications and contact links.","On the road, « Near me » centres the map on your position and sorts sites by distance.","By default the map shows the MGH area. The « Territory » filter limits it to Wallonia, Hauts-de-France and Grand Est."],
-  csvHead:["Site","Sector","Sub-sector","Group","Country","City","Region","Lat","Lon","Capacity","Status","History","Web","Reliability"],
+  empty:["Tap a point on the map or a row in the table to zoom in and open the site card: group, capacity, status, history, gearbox applications and contact links.","On the road, « Near me » centres the map on your position and sorts sites by distance.","By default the map shows the MGH area. The « Territory » filter limits it to Wallonia and North-West France (Hauts-de-France, Normandy, Brittany, Pays de la Loire)."],
+  csvHead:["Site","Sector","Sub-sector","Group","Country","City","Region","Lat","Lon","Capacity","Crushing power kW","Status","History","Web","Reliability"],
   copied:"{n} sites copied: paste into Excel", copyFail:"Copy refused by the browser",
   geoNA:"Geolocation not available on this device", geoWait:"Finding your position…", myPos:"My position",
   geoRes:"{n} sites within {r}", europe:"all of Europe", geoDenied:"Allow location access in settings", geoFail:"Position not found, try again",
-  installed:"App installed"
+  installed:"App installed",
+  kwF:"Crushing",kwAll:"All power ratings",act:"Status",actOn:"In operation only",actAll:"All statuses",more:"Table limited to the first {s} rows of {n}. Narrow the filters to see the rest ; the map shows every site.",src:"Source",srcIcpe:"ICPE register, Géorisques (2026 data)",srcManual:"MGH base, public research",srcSpw:"Active quarries register, SPW Wallonia",geoFiche:"Géorisques record",kwT:"Crushing power"
 }};
 
 const CATS = {
@@ -271,7 +280,7 @@ const CATS = {
     fr:["Fours rotatifs : entraînement couronne, réducteurs principaux et auxiliaires","Broyeurs à boulets et broyeurs verticaux : réducteurs planétaires lourds","Concasseurs, élévateurs à godets, transporteurs à bande","Ventilateurs de tirage, refroidisseurs à grille"],
     nl:["Draaiovens: kransaandrijving, hoofd- en hulptandwielkasten","Kogelmolens en verticale molens: zware planetaire tandwielkasten","Brekers, bakkenelevatoren, bandtransporteurs","Trekventilatoren, roosterkoelers"],
     en:["Rotary kilns: girth gear drive, main and auxiliary gearboxes","Ball mills and vertical roller mills: heavy planetary gearboxes","Crushers, bucket elevators, belt conveyors","Draught fans, grate coolers"]}},
-  carriere:{v:"--c-carriere",l:{fr:"Carrières / mines",nl:"Groeven / mijnen",en:"Quarries / mines"},apps:{
+  carriere:{v:"--c-carriere",l:{fr:"Carrières / concassage",nl:"Groeven / breken",en:"Quarries / crushing"},apps:{
     fr:["Concasseurs primaires et secondaires","Convoyeurs longue distance : réducteurs à arbres parallèles et coniques","Cribles, broyeurs, laveurs à sable","Treuils et skips (mines souterraines)"],
     nl:["Primaire en secundaire brekers","Langeafstandstransporteurs: tandwielkasten met parallelle en haakse assen","Zeven, molens, zandwassers","Lieren en skips (ondergrondse mijnen)"],
     en:["Primary and secondary crushers","Long-distance conveyors: parallel-shaft and bevel gearboxes","Screens, mills, sand washers","Winders and skips (underground mines)"]}},
@@ -300,7 +309,8 @@ const tx=s=>{if(!s||lang==="fr")return s||"";const e=TR[s];return e?e[LI[lang]]:
 const cl=k=>CATS[k].l[lang]; const pn=p=>PAYS[lang][p]||p;
 
 const ZMGH = new Set(["BE","NL","LU","FR","ES","IT"]);
-const SECT = s => (s.p==="BE"&&s.r==="Wallonie") || (s.p==="FR"&&(s.r==="Hauts-de-France"||s.r==="Grand Est"));
+const NW = new Set(["Hauts-de-France","Normandie","Bretagne","Pays de la Loire"]);   // secteur Nord-Ouest France
+const SECT = s => (s.p==="BE"&&s.r==="Wallonie") || (s.p==="FR"&&NW.has(s.r));
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
@@ -341,7 +351,7 @@ const map=L.map("map",{zoomControl:true,attributionControl:false,minZoom:3,maxZo
 const baseStyle=()=>({color:css("--border"),weight:.8,fillColor:css("--land"),fillOpacity:1});
 const base=L.geoJSON(EU,{style:baseStyle,interactive:false}).addTo(map);
 const layer=L.layerGroup().addTo(map);
-function radius(){const z=map.getZoom();return z<5?4:z<7?6:z<9?8:10}
+function radius(){const z=map.getZoom();return z<5?2.5:z<6?3.5:z<7?5:z<9?7:9}
 function rad(){return +document.getElementById("rad").value}
 
 function filtered(){
@@ -350,17 +360,21 @@ function filtered(){
     && (zone==="all" || (zone==="mgh"?ZMGH.has(s.p):SECT(s)))
     && (!p||s.p===p)
     && (!me || !rad() || s.d<=rad())
-    && (!q || [s.n,s.g,s.v,s.r,tx(s.r),s.sub||"",tx(s.sub),pn(s.p)].join(" ").toLowerCase().includes(q)));
+    && (!kwMin() || s.src!=="ICPE" || s.kw>=kwMin())
+    && (actAll() || !s.st.startsWith("En fin"))
+    && (!q || [s.n,s.g,s.v,s.r,tx(s.r),s.sub||"",tx(s.sub),pn(s.p),s.aiot||""].join(" ").toLowerCase().includes(q)));
 }
+function kwMin(){return +document.getElementById("kwf").value}
+function actAll(){return document.getElementById("act").value==="all"}
 function zoneOf(s){return SECT(s)?["zA",t("zA")]:ZMGH.has(s.p)?["zB",t("zB")]:["zC",t("zC")]}
-const val=(s,k)=>k==="c"?cl(s.c):k==="p"?pn(s.p):k==="cap"||k==="st"?tx(s[k]):s[k];
+const val=(s,k)=>k==="cap"?-(s.kw||0):k==="c"?cl(s.c):k==="p"?pn(s.p):k==="cap"||k==="st"?tx(s[k]):s[k];
 
 function render(){
   const list=filtered();
   layer.clearLayers();
   const r=radius();
   list.forEach(s=>{
-    const m=L.circleMarker([s.la,s.lo],{radius:s.id===selId?r+4:r,color:s.id===selId?css("--fg"):css("--panel"),weight:s.id===selId?2.5:1.2,fillColor:css(CATS[s.c].v),fillOpacity:.92});
+    const m=L.circleMarker([s.la,s.lo],{radius:s.id===selId?r+4:r,color:s.id===selId?css("--fg"):css("--panel"),weight:s.id===selId?2.5:(map.getZoom()<6?.5:1.2),fillColor:css(CATS[s.c].v),fillOpacity:.92});
     m.bindTooltip(`<b>${esc(s.n)}</b><br>${esc(s.v)} · ${esc(pn(s.p))}`,{direction:"top",offset:[0,-6]});
     m.on("click",()=>select(s.id,true));
     m.addTo(layer);
@@ -372,7 +386,9 @@ function render(){
     Object.keys(CATS).map(k=>`<div class="kpi"><b style="color:var(${CATS[k].v})">${cnt(k)}</b><small>${esc(cl(k))}</small></div>`).join("");
   const rows=[...list].sort((a,b)=>{const x=val(a,sortK),y=val(b,sortK);return (typeof x==="number"?x-y:String(x).localeCompare(String(y),lang))*sortD});
   document.getElementById("thd").hidden=!me;
-  document.getElementById("tb").innerHTML=rows.map(s=>`<tr data-id="${s.id}">${me?`<td class="mono">${Math.round(s.d)} km</td>`:""}<td><b>${esc(s.n)}</b></td><td><span class="dot" style="background:var(${CATS[s.c].v})"></span>${esc(cl(s.c))}</td><td>${esc(s.g)}</td><td>${esc(pn(s.p))}</td><td>${esc(s.v)}</td><td>${esc(tx(s.cap))}</td><td>${esc(tx(s.st))}</td><td class="mono">${s.f}</td></tr>`).join("");
+  const LIM=400, mo=document.getElementById("more");
+  mo.hidden=rows.length<=LIM; if(rows.length>LIM) mo.textContent=t("more",{s:LIM,n:rows.length});
+  document.getElementById("tb").innerHTML=rows.slice(0,LIM).map(s=>`<tr data-id="${s.id}">${me?`<td class="mono">${Math.round(s.d)} km</td>`:""}<td><b>${esc(s.n)}</b></td><td><span class="dot" style="background:var(${CATS[s.c].v})"></span>${esc(cl(s.c))}</td><td>${esc(s.g)}</td><td>${esc(pn(s.p))}</td><td>${esc(s.v)}</td><td>${esc(tx(s.cap))}</td><td>${esc(tx(s.st))}</td><td class="mono">${s.f}</td></tr>`).join("");
 }
 function li(s){return "https://www.linkedin.com/search/results/people/?keywords="+encodeURIComponent(`maintenance ${s.g.split(" (")[0]} ${s.v.split(" (")[0]}`)}
 function select(id,fromMap){
@@ -387,8 +403,10 @@ function select(id,fromMap){
       ${me?`<dt>${t("dist")}</dt><dd>${t("distTxt",{d:Math.round(s.d)})}</dd>`:""}
       <dt>${t("status")}</dt><dd><span class="pill ${ok?"ok":"warn"}">${esc(tx(s.st))}</span></dd>
       <dt>${t("cap")}</dt><dd>${esc(tx(s.cap))}</dd>
+      ${s.kw?`<dt>${t("kwT")}</dt><dd class="mono">${s.kw.toLocaleString(lang)} kW</dd>`:""}
       <dt>${t("hist")}</dt><dd>${s.h?esc(tx(s.h)):`<span class="fiab">${t("none")}</span>`}</dd>
       <dt>${t("target")}</dt><dd><span class="pill ${z[0]}">${z[1]}</span></dd>
+      <dt>${t("src")}</dt><dd class="fiab">${s.src==="ICPE"?t("srcIcpe"):s.src==="SPW"?t("srcSpw"):t("srcManual")}</dd>
       <dt>${t("rel")}</dt><dd class="fiab">${t(s.f==="A"?"relA":s.f==="B"?"relB":"relC")}</dd>
     </dl>
     <h3>${t("appsH")}</h3>
@@ -396,7 +414,7 @@ function select(id,fromMap){
     <h3>${t("mghH")}</h3>
     <ul class="apps">${t("mgh").map(a=>`<li>${esc(a)}</li>`).join("")}</ul>
     <h3>${t("contactH")}</h3>
-    <div class="links">${s.w?`<a href="${esc(s.w)}" target="_blank" rel="noopener">${t("web")}</a>`:""}<a href="${li(s)}" target="_blank" rel="noopener">${t("liSearch")}</a><a href="https://www.google.com/maps/dir/?api=1&destination=${s.la},${s.lo}" target="_blank" rel="noopener">${t("route")}</a></div>
+    <div class="links">${s.w?`<a href="${esc(s.w)}" target="_blank" rel="noopener">${s.src==="ICPE"?t("geoFiche"):s.src==="SPW"?"Géoportail Wallonie":t("web")}</a>`:""}<a href="${li(s)}" target="_blank" rel="noopener">${t("liSearch")}</a><a href="https://www.google.com/maps/dir/?api=1&destination=${s.la},${s.lo}" target="_blank" rel="noopener">${t("route")}</a></div>
     <p class="note">${t("note")}</p>`;
   if(fromMap!=="nomove"){
     map.flyTo([s.la,s.lo],Math.max(map.getZoom(),9),{duration:.8});
@@ -408,8 +426,8 @@ function emptyFiche(){document.getElementById("fiche").innerHTML=`<div class="em
 
 document.getElementById("tb").addEventListener("click",e=>{const tr=e.target.closest("tr");if(tr)select(+tr.dataset.id,true)});
 document.querySelector("thead").addEventListener("click",e=>{const th=e.target.closest("th");if(!th)return;const k=th.dataset.k;sortD=sortK===k?-sortD:1;sortK=k;render()});
-["zone","pays"].forEach(id=>document.getElementById(id).addEventListener("change",()=>{try{localStorage.setItem("mgh-zone",document.getElementById("zone").value)}catch(e){}render();fit()}));
-document.getElementById("q").addEventListener("input",render);
+["zone","pays","kwf","act"].forEach(id=>document.getElementById(id).addEventListener("change",()=>{try{localStorage.setItem("mgh-zone",document.getElementById("zone").value)}catch(e){}render();fit()}));
+let qT;document.getElementById("q").addEventListener("input",()=>{clearTimeout(qT);qT=setTimeout(render,180)});
 document.getElementById("reset").addEventListener("click",()=>{selId=null;emptyFiche();render();fit()});
 map.on("zoomend",render);
 function fit(){const l=filtered();if(l.length)map.fitBounds(L.latLngBounds(l.map(s=>[s.la,s.lo])).pad(.15),{maxZoom:8});}
@@ -418,7 +436,7 @@ const toast=(m)=>{const el=document.getElementById("toast");el.textContent=m;el.
 document.getElementById("csv").addEventListener("click",async()=>{
   const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
   const list=filtered();
-  const txt=[t("csvHead").join(";")].concat(list.map(s=>[s.n,cl(s.c),tx(s.sub),s.g,pn(s.p),s.v,tx(s.r),s.la,s.lo,tx(s.cap),tx(s.st),tx(s.h),s.w,s.f].map(q).join(";"))).join("\n");
+  const txt=[t("csvHead").join(";")].concat(list.map(s=>[s.n,cl(s.c),tx(s.sub),s.g,pn(s.p),s.v,tx(s.r),s.la,s.lo,tx(s.cap),s.kw||"",tx(s.st),tx(s.h),s.w,s.f].map(q).join(";"))).join("\n");
   try{await navigator.clipboard.writeText(txt);toast(t("copied",{n:list.length}));}catch(e){toast(t("copyFail"));}
 });
 const mq=matchMedia("(prefers-color-scheme: dark)");
